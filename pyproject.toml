@@ -18,16 +18,50 @@ python = "^3.7"
 idna = ">=3.3"
 
 [tool.poetry.dev-dependencies]
-bandit =  [{version="*", python="^3.6"}]
-flake8 = [{version="*", python="^3.6"}]
-pydocstyle = [{version="*", python="^3.6"}]
-pylint = [{version="*", python="^3.6"}]
-pytest = [{version="3.10.1", python="~2.7"},{version="*", python="^3.6"}]
-pytest-cov = [{version="2.9.0", python="~2.7"},{version="*", python="^3.6"}]
-pytest-flakes = [{version="4.0.1", python="~2.7"},{version="*", python="^3.6"}]
-pytest-socket = [{version="0.3.3", python="~2.7"}, {version="*", python="^3.6"}]
-tox = [{version="*", python="^3.6"}]
+pre-commit = ">=2.21"
+pytest = ">=7.4"
+pytest-cov = ">=4.1"
+pytest-socket = ">=0.6"
+tox = "*"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+skip-string-normalization = true
+
+[tool.coverage.html]
+directory = 'test-reports'
+
+[tool.coverage.xml]
+output = 'test-reports/coverage.xml'
+
+[tool.coverage.run]
+branch = true
+source = ['url_normalize']
+
+[tool.coverage.report]
+exclude_lines = [
+    'pragma: no cover',
+    'if TYPE_CHECKING:',
+]
+
+[tool.isort]
+profile = 'black'
+line_length = 100
+skip_gitignore = true
+known_first_party = ['tests']
+
+[tool.pytest.ini_options]
+addopts = "-v --cov-fail-under=99 --cov-report=term --disable-socket"
+
+[tool.ruff]
+format = 'grouped'
+line-length = 100
+select = ['B', 'C4','C90', 'E', 'F', 'W']
+
+# TODO: Reduce complexity of normalize_path()
+[tool.ruff.mccabe]
+max-complexity = 11
