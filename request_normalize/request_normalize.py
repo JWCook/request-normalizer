@@ -1,10 +1,30 @@
 """request-normalize main module"""
+# TODO: convert URL to dataclass
+# TODO: case-insensitive dict class (substitute for requests.models.CaseInsensitiveDict)
+# TODO: combine normalize_query and filter_url from requests-cache
+# TODO: optional support for request models from requests, aiohttp, httpx, etc.
+import json
 import re
 import unicodedata
 from collections import namedtuple
-from urllib.parse import quote, unquote, urlsplit, urlunsplit
+from typing import Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Union
+from urllib.parse import (
+    parse_qsl,
+    quote,
+    unquote,
+    urlencode,
+    urlparse,
+    urlsplit,
+    urlunparse,
+    urlunsplit,
+)
 
 import idna
+
+KVList = List[Tuple[str, str]]
+ParamList = Optional[Iterable[str]]
+Headers = MutableMapping[str, str]
+RequestContent = Union[Mapping, str, bytes]
 
 URL = namedtuple("URL", ["scheme", "userinfo", "host", "port", "path", "query", "fragment"])
 
@@ -25,7 +45,77 @@ DEFAULT_CHARSET = "utf-8"
 DEFAULT_SCHEME = "https"
 
 
-def url_normalize(
+def normalize_request(
+    url: str,
+    headers: Optional[Headers] = None,
+    body: Union[str, bytes, None] = None,
+    ignored_parameters: ParamList = None,
+) -> Tuple[str, Headers, bytes]:
+    """
+
+    Args:
+        url:
+        headers:
+        body:
+        ignored_parameters: Request paramters, headers, and/or JSON body params to exclude
+    """
+    return (
+        normalize_url(url or '', ignored_parameters),
+        normalize_headers(headers, ignored_parameters),
+        normalize_body(body, headers, ignored_parameters),
+    )
+
+
+def normalize_headers(headers: Optional[Headers], ignored_parameters: ParamList = None) -> Headers:
+    """Sort and filter request headers, and normalize minor variations in multi-value headers"""
+    if not headers:
+        return {}
+    if ignored_parameters:
+        headers = _filter_sort_dict(headers, ignored_parameters)
+    for k, v in headers.items():
+        if ',' in v:
+            values = [v.strip() for v in v.lower().split(',') if v.strip()]
+            headers[k] = ', '.join(sorted(values))
+    return headers
+    # return CaseInsensitiveDict(headers)
+
+
+def normalize_body(
+    body: Union[str, bytes],
+    headers: Optional[Headers] = None,
+    ignored_parameters: ParamList = None,
+) -> bytes:
+    """Normalize and filter a request body if possible, depending on Content-Type"""
+    if not body:
+        return b''
+    content_type = headers.get('Content-Type')
+
+    # Filter and sort params if possible
+    if content_type == 'application/json':
+        filtered_body = normalize_json_body(body, ignored_parameters)
+    elif content_type == 'application/x-www-form-urlencoded':
+        filtered_body = normalize_params(body, ignored_parameters)
+
+    return _encode(filtered_body)
+
+
+def normalize_json_body(
+    original_body: Union[str, bytes], ignored_parameters: ParamList
+) -> Union[str, bytes]:
+    """Normalize and filter a request body with serialized JSON data"""
+    # if len(original_body) <= 2 or len(original_body) > MAX_NORM_BODY_SIZE:
+    #     return original_body
+
+    try:
+        body = json.loads(_decode(original_body))
+        body = _filter_sort_json(body, ignored_parameters)
+        return json.dumps(body)
+    # If it's invalid JSON, then don't mess with it
+    except (AttributeError, TypeError, ValueError):
+        return original_body
+
+
+def normalize_url(
     url, charset=DEFAULT_CHARSET, default_scheme=DEFAULT_SCHEME, sort_query_params=True
 ):
     """URI normalization routine.
@@ -44,7 +134,6 @@ def url_normalize(
 
     Returns:
         string : a normalized url
-
     """
     if not url:
         return url
@@ -201,7 +290,11 @@ def normalize_path(path, scheme):
     return path
 
 
-def normalize_query(query, sort_query_params=True):
+def normalize_query(
+    query: str,
+    sort_query_params: bool = True,
+    ignored_parameters: ParamList = None,
+) -> str:
     """Normalize query part of the url.
 
     Params:
@@ -218,6 +311,39 @@ def normalize_query(query, sort_query_params=True):
         param_arr = sorted(param_arr)
     query = "&".join(param_arr)
     return query
+
+
+# TODO: Combine with normalize_query
+def filter_url(url: str, ignored_parameters: ParamList) -> str:
+    """Filter ignored parameters out of a URL"""
+    # Strip query params from URL, sort and filter, and reassemble into a complete URL
+    url_tokens = urlparse(url)
+    return urlunparse(
+        (
+            url_tokens.scheme,
+            url_tokens.netloc,
+            url_tokens.path,
+            url_tokens.params,
+            normalize_params(url_tokens.query, ignored_parameters),
+            url_tokens.fragment,
+        )
+    )
+
+
+def normalize_params(value: Union[str, bytes], ignored_parameters: ParamList = None) -> str:
+    """Normalize and filter urlencoded params from either a URL or request body with form data"""
+    value = _decode(value)
+    params = parse_qsl(value)
+    params = _filter_sort_multidict(params, ignored_parameters)
+    query_str = urlencode(params)
+
+    # parse_qsl doesn't handle key-only params, so add those here
+    key_only_params = [k for k in value.split('&') if k and '=' not in k]
+    if key_only_params:
+        key_only_param_str = '&'.join(sorted(key_only_params))
+        query_str = f'{query_str}&{key_only_param_str}' if query_str else key_only_param_str
+
+    return query_str
 
 
 def deconstruct_url(url):
@@ -270,3 +396,44 @@ def requote(string, charset="utf-8", safe="/"):
     string = unquote(string)
     string = unicodedata.normalize("NFC", string).encode(charset)
     return quote(string, safe)
+
+
+def _decode(value, encoding='utf-8') -> str:
+    """Decode a value from bytes, if hasn't already been"""
+    if not value:
+        return ''
+    return value.decode(encoding) if isinstance(value, bytes) else value
+
+
+def _encode(value, encoding='utf-8') -> bytes:
+    """Encode a value to bytes, if it hasn't already been"""
+    if not value:
+        return b''
+    return value if isinstance(value, bytes) else str(value).encode(encoding)
+
+
+def _filter_sort_json(data: Union[List, Mapping], ignored_parameters: ParamList):
+    if isinstance(data, Mapping):
+        return _filter_sort_dict(data, ignored_parameters)
+    else:
+        return _filter_sort_list(data, ignored_parameters)
+
+
+def _filter_sort_dict(
+    data: Mapping[str, str], ignored_parameters: ParamList = None
+) -> Dict[str, str]:
+    # Note: Any ignored_parameters present will have their values replaced instead of removing the
+    # parameter, so the cache key will still match whether the parameter was present or not.
+    ignored_parameters = set(ignored_parameters or [])
+    return {k: ('REDACTED' if k in ignored_parameters else v) for k, v in sorted(data.items())}
+
+
+def _filter_sort_multidict(data: KVList, ignored_parameters: ParamList = None) -> KVList:
+    ignored_parameters = set(ignored_parameters or [])
+    return [(k, 'REDACTED' if k in ignored_parameters else v) for k, v in sorted(data)]
+
+
+def _filter_sort_list(data: List, ignored_parameters: ParamList = None) -> List:
+    if not ignored_parameters:
+        return sorted(data)
+    return [k for k in sorted(data) if k not in set(ignored_parameters)]

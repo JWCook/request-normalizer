@@ -8,11 +8,11 @@ from request_normalize.request_normalize import (
     normalize_path,
     normalize_port,
     normalize_query,
+    normalize_url,
     normalize_userinfo,
     provide_url_scheme,
     reconstruct_url,
     requote,
-    url_normalize,
 )
 
 
@@ -76,7 +76,7 @@ from request_normalize.request_normalize import (
 )
 def test_url_normalize(url, expected):
     """Test main url_normalize function with a representative set of URLs"""
-    assert url_normalize(url) == expected
+    assert normalize_url(url) == expected
 
 
 @pytest.mark.parametrize(
@@ -117,21 +117,21 @@ def test_url_normalize__no_change(url):
 
     http://www.intertwingly.net/wiki/pie/PaceCanonicalIds
     """
-    assert url_normalize(url) == url
+    assert normalize_url(url) == url
 
 
 def test_url_normalize__with_http_scheme():
     """Assert we could use http scheme as default."""
     url = "//www.foo.com/"
     expected = "http://www.foo.com/"
-    assert url_normalize(url, default_scheme="http") == expected
+    assert normalize_url(url, default_scheme="http") == expected
 
 
 def test_url_normalize__with_no_params_sorting():
     """Assert we could use http scheme as default."""
     url = "http://www.foo.com/?b=1&a=2"
     expected = "http://www.foo.com/?b=1&a=2"
-    assert url_normalize(url, sort_query_params=False) == expected
+    assert normalize_url(url, sort_query_params=False) == expected
 
 
 @pytest.mark.parametrize(
