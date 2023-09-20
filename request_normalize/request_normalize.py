@@ -1,12 +1,11 @@
 """request-normalize main module"""
-# TODO: convert URL to dataclass
 # TODO: case-insensitive dict class (substitute for requests.models.CaseInsensitiveDict)
 # TODO: combine normalize_query and filter_url from requests-cache
 # TODO: optional support for request models from requests, aiohttp, httpx, etc.
 import json
 import re
 import unicodedata
-from collections import namedtuple
+from dataclasses import dataclass
 from typing import Dict, Iterable, List, Mapping, MutableMapping, Optional, Tuple, Union
 from urllib.parse import (
     parse_qsl,
@@ -24,9 +23,6 @@ import idna
 KVList = List[Tuple[str, str]]
 ParamList = Optional[Iterable[str]]
 Headers = MutableMapping[str, str]
-RequestContent = Union[Mapping, str, bytes]
-
-URL = namedtuple("URL", ["scheme", "userinfo", "host", "port", "path", "query", "fragment"])
 
 DEFAULT_PORT = {
     "ftp": "21",
@@ -45,11 +41,45 @@ DEFAULT_CHARSET = "utf-8"
 DEFAULT_SCHEME = "https"
 
 
+@dataclass
+class URL:
+    scheme: str
+    userinfo: str
+    host: str
+    port: str
+    path: str
+    query: str
+    fragment: str
+
+    @classmethod
+    def from_string(cls, url: str) -> 'URL':
+        """Parse a URL string into its components"""
+        scheme, auth, path, query, fragment = urlsplit(url.strip())
+        (userinfo, host, port) = re.search("([^@]*@)?([^:]*):?(.*)", auth).groups()
+        return cls(
+            fragment=fragment,
+            host=host,
+            path=path,
+            port=port,
+            query=query,
+            scheme=scheme,
+            userinfo=userinfo or "",
+        )
+
+    def to_string(self) -> str:
+        """Recombine URL components into a string"""
+        auth = (self.userinfo or "") + self.host
+        if self.port:
+            auth += ":" + self.port
+        return urlunsplit((self.scheme, auth, self.path, self.query, self.fragment))
+
+
 def normalize_request(
     url: str,
     headers: Optional[Headers] = None,
     body: Union[str, bytes, None] = None,
     ignored_parameters: ParamList = None,
+    sort_query_params: bool = True,
 ) -> Tuple[str, Headers, bytes]:
     """
 
@@ -60,7 +90,7 @@ def normalize_request(
         ignored_parameters: Request paramters, headers, and/or JSON body params to exclude
     """
     return (
-        normalize_url(url or '', ignored_parameters),
+        normalize_url(url or '', sort_query_params, ignored_parameters),
         normalize_headers(headers, ignored_parameters),
         normalize_body(body, headers, ignored_parameters),
     )
@@ -116,8 +146,11 @@ def normalize_json_body(
 
 
 def normalize_url(
-    url, charset=DEFAULT_CHARSET, default_scheme=DEFAULT_SCHEME, sort_query_params=True
-):
+    url: str,
+    charset: str = DEFAULT_CHARSET,
+    default_scheme: str = DEFAULT_SCHEME,
+    sort_query_params: bool = True,
+) -> str:
     """URI normalization routine.
 
     Sometimes you get an URL by a user that just isn't a real
@@ -139,20 +172,17 @@ def normalize_url(
         return url
     url = provide_url_scheme(url, default_scheme)
     url = generic_url_cleanup(url)
-    url_elements = deconstruct_url(url)
-    url_elements = url_elements._replace(
-        scheme=url_elements.scheme.lower(),
-        userinfo=normalize_userinfo(url_elements.userinfo),
-        host=normalize_host(url_elements.host, charset),
-        query=normalize_query(url_elements.query, sort_query_params),
-        fragment=requote(url_elements.fragment, safe="~"),
-    )
-    url_elements = url_elements._replace(
-        port=normalize_port(url_elements.port, url_elements.scheme),
-        path=normalize_path(url_elements.path, url_elements.scheme),
-    )
-    url = reconstruct_url(url_elements)
-    return url
+    url_parts = URL.from_string(url)
+
+    url_parts.scheme = url_parts.scheme.lower()
+    url_parts.userinfo = normalize_userinfo(url_parts.userinfo)
+    url_parts.host = normalize_host(url_parts.host, charset)
+    url_parts.query = normalize_query(url_parts.query, sort_query_params)
+    url_parts.fragment = requote(url_parts.fragment, safe="~")
+    url_parts.port = normalize_port(url_parts.port, url_parts.scheme)
+    url_parts.path = normalize_path(url_parts.path, url_parts.scheme)
+
+    return url_parts.to_string()
 
 
 def provide_url_scheme(url, default_scheme=DEFAULT_SCHEME):
@@ -344,43 +374,6 @@ def normalize_params(value: Union[str, bytes], ignored_parameters: ParamList = N
         query_str = f'{query_str}&{key_only_param_str}' if query_str else key_only_param_str
 
     return query_str
-
-
-def deconstruct_url(url):
-    """Tranform the url into URL structure.
-
-    Params:
-        url : string : the URL
-
-    Returns:
-        URL
-    """
-    scheme, auth, path, query, fragment = urlsplit(url.strip())
-    (userinfo, host, port) = re.search("([^@]*@)?([^:]*):?(.*)", auth).groups()
-    return URL(
-        fragment=fragment,
-        host=host,
-        path=path,
-        port=port,
-        query=query,
-        scheme=scheme,
-        userinfo=userinfo or "",
-    )
-
-
-def reconstruct_url(url):
-    """Reconstruct string url from URL.
-
-    Params:
-        url : URL object instance
-
-    Returns:
-        string : reconstructed url string
-    """
-    auth = (url.userinfo or "") + url.host
-    if url.port:
-        auth += ":" + url.port
-    return urlunsplit((url.scheme, auth, url.path, url.query, url.fragment))
 
 
 def requote(string, charset="utf-8", safe="/"):

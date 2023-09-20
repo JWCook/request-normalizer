@@ -2,7 +2,6 @@ import pytest
 
 from request_normalize.request_normalize import (
     URL,
-    deconstruct_url,
     generic_url_cleanup,
     normalize_host,
     normalize_path,
@@ -11,7 +10,6 @@ from request_normalize.request_normalize import (
     normalize_url,
     normalize_userinfo,
     provide_url_scheme,
-    reconstruct_url,
     requote,
 )
 
@@ -134,70 +132,58 @@ def test_url_normalize__with_no_params_sorting():
     assert normalize_url(url, sort_query_params=False) == expected
 
 
-@pytest.mark.parametrize(
-    "url, expected",
-    [
-        (
-            "http://site.com",
-            URL(
-                fragment="",
-                host="site.com",
-                path="",
-                port="",
-                query="",
-                scheme="http",
-                userinfo="",
-            ),
-        ),
-        (
-            "http://user@www.example.com:8080/path/index.html?param=val#fragment",
-            URL(
-                fragment="fragment",
-                host="www.example.com",
-                path="/path/index.html",
-                port="8080",
-                query="param=val",
-                scheme="http",
-                userinfo="user@",
-            ),
-        ),
-    ],
-)
-def test_deconstruct_url(url, expected):
-    assert deconstruct_url(url) == expected
+def test_url_from_string():
+    url = "http://user@www.example.com:8080/path/index.html?param=val#fragment"
+    expected = URL(
+        fragment="fragment",
+        host="www.example.com",
+        path="/path/index.html",
+        port="8080",
+        query="param=val",
+        scheme="http",
+        userinfo="user@",
+    )
+    assert URL.from_string(url) == expected
 
 
-@pytest.mark.parametrize(
-    "url, expected",
-    [
-        (
-            URL(
-                fragment="",
-                host="site.com",
-                path="",
-                port="",
-                query="",
-                scheme="http",
-                userinfo="",
-            ),
-            "http://site.com",
-        ),
-        (
-            URL(
-                fragment="fragment",
-                host="www.example.com",
-                path="/path/index.html",
-                port="8080",
-                query="param=val",
-                scheme="http",
-                userinfo="user@",
-            ),
-            "http://user@www.example.com:8080/path/index.html?param=val#fragment",
-        ),
-    ],
-)
-def test_reconstruct_url(url, expected):
-    assert reconstruct_url(url) == expected
+def test_url_from_string__defaults():
+    expected = URL(
+        fragment="",
+        host="site.com",
+        path="",
+        port="",
+        query="",
+        scheme="http",
+        userinfo="",
+    )
+    assert URL.from_string("http://site.com") == expected
+
+
+def test_url_to_string():
+    url = URL(
+        fragment="fragment",
+        host="www.example.com",
+        path="/path/index.html",
+        port="8080",
+        query="param=val",
+        scheme="http",
+        userinfo="user@",
+    )
+    expected = "http://user@www.example.com:8080/path/index.html?param=val#fragment"
+    assert URL.to_string(url) == expected
+
+
+def test_url_to_string__defaults():
+    url = URL(
+        fragment="",
+        host="site.com",
+        path="",
+        port="",
+        query="",
+        scheme="http",
+        userinfo="",
+    )
+    assert url.to_string() == "http://site.com"
 
 
 @pytest.mark.parametrize(
