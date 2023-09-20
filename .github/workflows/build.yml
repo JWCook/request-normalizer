@@ -46,7 +46,7 @@ jobs:
       - name: Run unit tests
         run: |
           source $VENV
-          pytest
+          nox -e cov -- xml
 
       # TODO: Latest python version: send coverage report to codecov
       # - name: "Upload coverage report to Codecov"
