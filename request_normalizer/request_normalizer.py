@@ -15,6 +15,7 @@ KVList = List[Tuple[str, str]]
 ParamList = Optional[Iterable[str]]
 Headers = MutableMapping[str, str]
 
+AUTH_PATTERN = re.compile("([^@]*@)?([^:]*):?(.*)")
 DEFAULT_PORT = {
     "ftp": "21",
     "gopher": "70",
@@ -46,7 +47,7 @@ class URL:
     def from_string(cls, url: str) -> 'URL':
         """Parse a URL string into its components"""
         scheme, auth, path, query, fragment = urlsplit(url.strip())
-        (userinfo, host, port) = re.search("([^@]*@)?([^:]*):?(.*)", auth).groups()
+        (userinfo, host, port) = AUTH_PATTERN.search(auth).groups()
         return cls(
             fragment=fragment,
             host=host,
@@ -279,34 +280,33 @@ def normalize_path(path, scheme):
     Returns:
         string : normalized path data.
     """
+    if scheme not in ["", "http", "https", "ftp", "file"]:
+        return path
+
     # Only perform percent-encoding where it is essential.
     # Always use uppercase A-through-F characters when percent-encoding.
     # All portions of the URI must be utf-8 encoded NFC from Unicode strings
     path = requote(path)
+
     # Prevent dot-segments appearing in non-relative URI paths.
-    if scheme in ["", "http", "https", "ftp", "file"]:
-        output, part = [], None
-        parts = path.split("/")
-        last_idx = len(parts) - 1
-        for idx, part in enumerate(parts):
-            if part == "":
-                if not output:
-                    output.append(part)
-            elif part == ".":
-                pass
-            elif part == "..":
-                if len(output) > 1:
-                    output.pop()
-            elif re.search(r'\.', part) and idx != last_idx:
-                pass
-            else:
+    output, part = [], None
+    parts = path.split("/")
+    last_idx = len(parts) - 1
+    for idx, part in enumerate(parts):
+        if part == "":
+            if len(output) == 0:
                 output.append(part)
-        if part in ["", ".", ".."]:
-            output.append("")
-        path = "/".join(output)
-    # For schemes that define an empty path to be equivalent to a path of "/",
-    # use "/".
-    if not path and scheme in ["http", "https", "ftp", "file"]:
+        elif part == "..":
+            if len(output) > 1:
+                output.pop()
+        elif part != "." and not (idx < last_idx and re.search(r'\.', part)):
+            output.append(part)
+    if part in ["", ".", ".."]:
+        output.append("")
+    path = "/".join(output)
+
+    # For schemes that define an empty path to be equivalent to a path of "/", use "/".
+    if scheme and not path:
         path = "/"
     return path
 

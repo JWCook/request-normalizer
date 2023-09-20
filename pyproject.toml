@@ -63,9 +63,5 @@ format = 'grouped'
 line-length = 100
 select = ['B', 'C4','C90', 'E', 'F', 'W']
 
-# TODO: Reduce complexity of normalize_path()
-[tool.ruff.mccabe]
-max-complexity = 11
-
 [tool.bandit]
 exclude_dirs = [".nox", "tests"]
