@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 """URL normalize main module."""
 import re
+from urllib.parse import quote
+
 import idna
-from .tools import deconstruct_url, force_unicode, quote, reconstruct_url, unquote
+
+from .tools import deconstruct_url, reconstruct_url, unquote
 
 DEFAULT_PORT = {
     "ftp": "21",
@@ -101,7 +104,6 @@ def normalize_host(host, charset=DEFAULT_CHARSET):
         string : normalized host data.
 
     """
-    host = force_unicode(host, charset)
     host = host.lower()
     host = host.strip(".")
     host = idna.encode(host, uts46=True, transitional=True).decode(charset)
@@ -208,7 +210,7 @@ def normalize_query(query, sort_query_params=True):
 
 
 def url_normalize(
-        url, charset=DEFAULT_CHARSET, default_scheme=DEFAULT_SCHEME, sort_query_params=True
+    url, charset=DEFAULT_CHARSET, default_scheme=DEFAULT_SCHEME, sort_query_params=True
 ):
     """URI normalization routine.
 

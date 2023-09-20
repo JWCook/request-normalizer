@@ -1,12 +1,9 @@
-"""Url normalize tools (py27/py37 compatible)."""
+"""Url normalize tools"""
 import re
 import unicodedata
 from collections import namedtuple
-
-import six
-from six.moves.urllib.parse import quote as quote_orig
-from six.moves.urllib.parse import unquote as unquote_orig
-from six.moves.urllib.parse import urlsplit, urlunsplit
+from urllib.parse import unquote as unquote_orig
+from urllib.parse import urlsplit, urlunsplit
 
 URL = namedtuple(
     "URL", ["scheme", "userinfo", "host", "port", "path", "query", "fragment"]
@@ -52,22 +49,6 @@ def reconstruct_url(url):
     return urlunsplit((url.scheme, auth, url.path, url.query, url.fragment))
 
 
-def force_unicode(string, charset="utf-8"):
-    """Convert string to unicode if it is not yet unicode.
-
-    Params:
-        string : string/unicode : an input string
-        charset : string : optional : output encoding
-
-    Returns:
-        unicode
-
-    """
-    if isinstance(string, six.text_type):  # Always True on Py3
-        return string
-    return string.decode(charset, "replace")  # Py2 only
-
-
 def unquote(string, charset="utf-8"):
     """Unquote and normalize unicode string.
 
@@ -80,21 +61,5 @@ def unquote(string, charset="utf-8"):
 
     """
     string = unquote_orig(string)
-    string = force_unicode(string, charset)
     string = unicodedata.normalize("NFC", string).encode(charset)
-    return string
-
-
-def quote(string, safe="/"):
-    """Quote string.
-
-    Params:
-        string : string to be quoted
-        safe : string of safe characters
-
-    Returns:
-        string : quoted string
-
-    """
-    string = quote_orig(string, safe)
     return string
