@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
 """Integrations tests."""
-from url_normalize import url_normalize
+import pytest
 
+from url_normalize import url_normalize
 
 EXPECTED_RESULTS = {
     "/../foo": "/foo",
@@ -81,36 +81,30 @@ NO_CHANGES_EXPECTED = (
 )
 
 
-def test_url_normalize_changes():
+@pytest.mark.parametrize("url", NO_CHANGES_EXPECTED)
+def test_url_normalize_changes(url):
     """Assert url_normalize do not change URI if not required.
 
     http://www.intertwingly.net/wiki/pie/PaceCanonicalIds
     """
-    for value in NO_CHANGES_EXPECTED:
-        assert url_normalize(value) == value
+    assert url_normalize(url) == url
 
 
-def test_url_normalize_results():
+@pytest.mark.parametrize("url, expected", EXPECTED_RESULTS.items())
+def test_url_normalize_results(url, expected):
     """Assert url_normalize return expected results."""
-    for value, expected in EXPECTED_RESULTS.items():
-        assert expected == url_normalize(value), value
+    assert url_normalize(url) == expected
 
 
 def test_url_normalize_with_http_scheme():
     """Assert we could use http scheme as default."""
     url = "//www.foo.com/"
     expected = "http://www.foo.com/"
-
-    actual = url_normalize(url, default_scheme="http")
-
-    assert actual == expected
+    assert url_normalize(url, default_scheme="http") == expected
 
 
 def test_url_normalize_with_no_params_sorting():
     """Assert we could use http scheme as default."""
     url = "http://www.foo.com/?b=1&a=2"
     expected = "http://www.foo.com/?b=1&a=2"
-
-    actual = url_normalize(url, sort_query_params=False)
-
-    assert actual == expected
+    assert url_normalize(url, sort_query_params=False) == expected

@@ -1,5 +1,6 @@
-# -*- coding: utf-8 -*-
 """Tests for normalize_host function."""
+import pytest
+
 from url_normalize.url_normalize import normalize_host
 
 EXPECTED_DATA = {
@@ -10,10 +11,7 @@ EXPECTED_DATA = {
 }
 
 
-def test_normalize_host_result_is_expected():
+@pytest.mark.parametrize("host, expected", EXPECTED_DATA.items())
+def test_normalize_host_result_is_expected(host, expected):
     """Assert we got expected results from the normalize_host function."""
-    for url, expected in EXPECTED_DATA.items():
-
-        result = normalize_host(url)
-
-        assert result == expected, url
+    assert normalize_host(host) == expected

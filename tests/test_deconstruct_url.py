@@ -1,5 +1,7 @@
 """Deconstruct url tests."""
-from url_normalize.tools import deconstruct_url, URL
+import pytest
+
+from url_normalize.tools import URL, deconstruct_url
 
 EXPECTED_DATA = {
     "http://site.com": URL(
@@ -23,10 +25,7 @@ EXPECTED_DATA = {
 }
 
 
-def test_deconstruct_url_result_is_expected():
+@pytest.mark.parametrize("url, expected", EXPECTED_DATA.items())
+def test_deconstruct_url_result_is_expected(url, expected):
     """Assert we got expected results from the deconstruct_url function."""
-    for url, expected in EXPECTED_DATA.items():
-
-        result = deconstruct_url(url)
-
-        assert result == expected, url
+    assert deconstruct_url(url) == expected

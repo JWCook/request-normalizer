@@ -1,4 +1,5 @@
 """Tests for normalize_path function."""
+import pytest
 from url_normalize.url_normalize import normalize_path
 
 EXPECTED_DATA = {
@@ -31,10 +32,7 @@ EXPECTED_DATA = {
 }
 
 
-def test_normalize_host_result_is_expected():
+@pytest.mark.parametrize("path, expected", EXPECTED_DATA.items())
+def test_normalize_host_result_is_expected(path, expected):
     """Assert we got expected results from the normalize_path function."""
-    for url, expected in EXPECTED_DATA.items():
-
-        result = normalize_path(url, "http")
-
-        assert result == expected, url
+    assert normalize_path(path, "http") == expected

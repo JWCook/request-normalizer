@@ -1,4 +1,5 @@
 """Tests for generic_url_cleanup function."""
+import pytest
 from url_normalize.url_normalize import generic_url_cleanup
 
 EXPECTED_DATA = {
@@ -11,10 +12,7 @@ EXPECTED_DATA = {
 }
 
 
-def test_generic_url_cleanup_result_is_expected():
+@pytest.mark.parametrize("url, expected", EXPECTED_DATA.items())
+def test_generic_url_cleanup_result_is_expected(url, expected):
     """Assert we got expected results from the generic_url_cleanup function."""
-    for url, expected in EXPECTED_DATA.items():
-
-        result = generic_url_cleanup(url)
-
-        assert result == expected, url
+    assert generic_url_cleanup(url) == expected

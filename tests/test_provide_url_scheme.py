@@ -1,4 +1,6 @@
 """Tests for provide_url_scheme function."""
+import pytest
+
 from url_normalize.url_normalize import provide_url_scheme
 
 EXPECTED_DATA = {
@@ -11,20 +13,14 @@ EXPECTED_DATA = {
 }
 
 
-def test_provide_url_scheme_result_is_expected():
+@pytest.mark.parametrize("url, expected", EXPECTED_DATA.items())
+def test_provide_url_scheme_result_is_expected(url, expected):
     """Assert we got expected results from the provide_url_scheme function."""
-    for url, expected in EXPECTED_DATA.items():
-
-        result = provide_url_scheme(url)
-
-        assert result == expected, url
+    assert provide_url_scheme(url) == expected
 
 
 def test_provide_url_scheme_accept_default_scheme_param():
     """Assert we could provide default_scheme param other than https."""
     url = "//site/path"
     expected = "http://site/path"
-
-    actual = provide_url_scheme(url, default_scheme="http")
-
-    assert actual == expected
+    assert provide_url_scheme(url, default_scheme="http") == expected
