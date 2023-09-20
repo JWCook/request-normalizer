@@ -46,6 +46,7 @@ from request_normalize.request_normalize import (
         ("http://example.com/?b&a", "http://example.com/?a&b"),
         ("http://example.com/?q=%5c", "http://example.com/?q=%5C"),
         ("http://example.com/?q=%C7", "http://example.com/?q=%EF%BF%BD"),
+        # ("http://example.com/?k_only&kv=true", "http://example.com/?kv=true&k_only"),
         ("http://example.com/?q=C%CC%A7", "http://example.com/?q=%C3%87"),
         ("http://EXAMPLE.COM/", "http://example.com/"),
         ("http://example.com/%7Ejane", "http://example.com/~jane"),
@@ -125,11 +126,11 @@ def test_url_normalize__with_http_scheme():
     assert normalize_url(url, default_scheme="http") == expected
 
 
-def test_url_normalize__with_no_params_sorting():
+def test_url_normalize__unsorted():
     """Assert we could use http scheme as default."""
     url = "http://www.foo.com/?b=1&a=2"
     expected = "http://www.foo.com/?b=1&a=2"
-    assert normalize_url(url, sort_query_params=False) == expected
+    assert normalize_url(url, sort_params=False) == expected
 
 
 def test_url_from_string():
@@ -286,7 +287,7 @@ def test_normalize_port(port, expected):
         ("q=C%CC%A7", "q=%C3%87"),
     ],
 )
-def test_normalize_queryd(url, expected):
+def test_normalize_query(url, expected):
     assert normalize_query(url) == expected
 
 
