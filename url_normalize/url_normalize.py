@@ -106,8 +106,10 @@ def normalize_host(host, charset=DEFAULT_CHARSET):
     """
     host = host.lower()
     host = host.strip(".")
-    host = idna.encode(host, uts46=True, transitional=True).decode(charset)
-    return host
+    # Skip IDN normalization for URIs that do not contain a domain name
+    if '.' not in host:
+        return host
+    return idna.encode(host, uts46=True, transitional=True).decode(charset)
 
 
 def normalize_port(port, scheme):
