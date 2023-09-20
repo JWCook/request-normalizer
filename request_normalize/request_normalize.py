@@ -1,4 +1,4 @@
-"""URL normalize main module."""
+"""request-normalize main module"""
 import re
 import unicodedata
 from collections import namedtuple

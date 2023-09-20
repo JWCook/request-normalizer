@@ -1,6 +1,6 @@
 import pytest
 
-from url_normalize.url_normalize import (
+from request_normalize.request_normalize import (
     URL,
     deconstruct_url,
     generic_url_cleanup,

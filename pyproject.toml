@@ -1,17 +1,17 @@
 [tool.poetry]
-authors = ["Nikolay Panov <github@npanov.com>"]
-description = "URL normalization for Python"
-homepage = "https://github.com/niksite/url-normalize"
-keywords = ['url', 'normalization', 'normalize']
+name = "request-normalize"
+version = "1.0.0"
+description = "HTTP request normalization"
+authors = ["Jordan Cook", "Nikolay Panov <github@npanov.com>"]
 license = "MIT"
-name = "url-normalize"
+repository = "https://github.com/JWCook/url-normalize"
+homepage = "https://github.com/JWCook/url-normalize"
+keywords = ['url', 'normalization', 'normalize']
 readme = "README.md"
-repository = "https://github.com/niksite/url-normalize"
-version = "1.4.3"
 
 [tool.poetry.urls]
-"Bug Tracker" = "https://github.com/niksite/url-normalize/issues"
-"Changelog" = "https://github.com/niksite/url-normalize#url-normalize"
+"Changelog" = "https://github.com/JWCook/url-normalize/blob/main/HISTORY.md"
+"Issues" = "https://github.com/JWCook/url-normalize/issues"
 
 [tool.poetry.dependencies]
 python = "^3.7"
@@ -41,7 +41,7 @@ output = 'test-reports/coverage.xml'
 
 [tool.coverage.run]
 branch = true
-source = ['url_normalize']
+source = ['request_normalize']
 
 [tool.coverage.report]
 exclude_lines = [
