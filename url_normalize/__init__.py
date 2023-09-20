@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 URI normalizator.
 
@@ -21,9 +20,6 @@ Inspired by Sam Ruby's urlnorm.py:
 This fork author: Nikolay Panov (<pythonista@npanov.com>)
 
 """
-
-from __future__ import absolute_import
-
 from .url_normalize import url_normalize
 
 __license__ = "Python"

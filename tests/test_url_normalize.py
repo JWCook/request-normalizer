@@ -1,17 +1,18 @@
 import pytest
 
-from url_normalize import url_normalize
-from url_normalize.tools import URL, deconstruct_url, reconstruct_url
 from url_normalize.url_normalize import (
+    URL,
+    deconstruct_url,
     generic_url_cleanup,
-    normalize_fragment,
     normalize_host,
     normalize_path,
     normalize_port,
     normalize_query,
-    normalize_scheme,
     normalize_userinfo,
     provide_url_scheme,
+    reconstruct_url,
+    requote,
+    url_normalize,
 )
 
 
@@ -37,6 +38,7 @@ from url_normalize.url_normalize import (
         ("/foo/bar/../baz", "/foo/baz"),
         ("/foo/bar/.", "/foo/bar/"),
         ("/foo/bar/./", "/foo/bar/"),
+        ("HTTP://:@example.com/", "http://example.com/"),
         ("http://:@example.com/", "http://example.com/"),
         ("http://@example.com/", "http://example.com/"),
         ("http://127.0.0.1:80/", "http://127.0.0.1/"),
@@ -224,7 +226,7 @@ def test_generic_url_cleanup(url, expected):
     ],
 )
 def test_normalize_fragment(fragment, expected):
-    assert normalize_fragment(fragment) == expected
+    assert requote(fragment, safe="~") == expected
 
 
 @pytest.mark.parametrize(
@@ -300,11 +302,6 @@ def test_normalize_port(port, expected):
 )
 def test_normalize_queryd(url, expected):
     assert normalize_query(url) == expected
-
-
-@pytest.mark.parametrize("scheme", ["http", "HTTP"])
-def test_normalize_scheme(scheme):
-    assert normalize_scheme(scheme) == 'http'
 
 
 @pytest.mark.parametrize(
