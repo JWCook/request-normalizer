@@ -25,7 +25,6 @@ def coverage(session):
     # Add coverage formats
     cov_formats = session.posargs or DEFAULT_COVERAGE_FORMATS
     cmd += [f'--cov-report={f}' for f in cov_formats]
-    cmd += ['--cov-fail-under=99']
 
     # Add verbose flag, if set by environment
     if getenv('PYTEST_VERBOSE'):

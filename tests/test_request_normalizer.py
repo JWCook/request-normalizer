@@ -17,25 +17,6 @@ from request_normalizer.request_normalizer import (
 @pytest.mark.parametrize(
     "url, expected",
     [
-        ("/../foo", "/foo"),
-        ("/./../foo", "/foo"),
-        ("/./foo", "/foo"),
-        ("/./foo/.", "/foo/"),
-        ("//www.foo.com/", "https://www.foo.com/"),
-        ("/foo/../bar", "/bar"),
-        ("/foo/./bar", "/foo/bar"),
-        ("/foo//", "/foo/"),
-        ("/foo///bar//", "/foo/bar/"),
-        ("/foo/bar/..", "/foo/"),
-        ("/foo/bar/../..", "/"),
-        ("/foo/bar/../../../../baz", "/baz"),
-        ("/foo/bar/../../../baz", "/baz"),
-        ("/foo/bar/../../", "/"),
-        ("/foo/bar/../../baz", "/baz"),
-        ("/foo/bar/../", "/foo/"),
-        ("/foo/bar/../baz", "/foo/baz"),
-        ("/foo/bar/.", "/foo/bar/"),
-        ("/foo/bar/./", "/foo/bar/"),
         ("HTTP://:@example.com/", "http://example.com/"),
         ("http://:@example.com/", "http://example.com/"),
         ("http://@example.com/", "http://example.com/"),
@@ -46,7 +27,8 @@ from request_normalizer.request_normalizer import (
         ("http://example.com/?b&a", "http://example.com/?a&b"),
         ("http://example.com/?q=%5c", "http://example.com/?q=%5C"),
         ("http://example.com/?q=%C7", "http://example.com/?q=%EF%BF%BD"),
-        # ("http://example.com/?k_only&kv=true", "http://example.com/?kv=true&k_only"),
+        ("http://example.com/?kv=true&k_only", "http://example.com/?k_only&kv=true"),
+        ("http://example.com/?foo=1&foo=2&bar=3", "http://example.com/?bar=3&foo=1&foo=2"),
         ("http://example.com/?q=C%CC%A7", "http://example.com/?q=%C3%87"),
         ("http://EXAMPLE.COM/", "http://example.com/"),
         ("http://example.com/%7Ejane", "http://example.com/~jane"),
@@ -74,7 +56,35 @@ from request_normalizer.request_normalizer import (
     ],
 )
 def test_normalize_url(url, expected):
-    """Test main normalize_url function with a representative set of URLs"""
+    """Test main normalize_url function for most common cases"""
+    assert normalize_url(url) == expected
+
+
+@pytest.mark.parametrize(
+    "url, expected",
+    [
+        ("/../foo", "/foo"),
+        ("/./../foo", "/foo"),
+        ("/./foo", "/foo"),
+        ("/./foo/.", "/foo/"),
+        ("//www.foo.com/", "https://www.foo.com/"),
+        ("/foo/../bar", "/bar"),
+        ("/foo/./bar", "/foo/bar"),
+        ("/foo//", "/foo/"),
+        ("/foo///bar//", "/foo/bar/"),
+        ("/foo/bar/..", "/foo/"),
+        ("/foo/bar/../..", "/"),
+        ("/foo/bar/../../../../baz", "/baz"),
+        ("/foo/bar/../../../baz", "/baz"),
+        ("/foo/bar/../../", "/"),
+        ("/foo/bar/../../baz", "/baz"),
+        ("/foo/bar/../", "/foo/"),
+        ("/foo/bar/../baz", "/foo/baz"),
+        ("/foo/bar/.", "/foo/bar/"),
+        ("/foo/bar/./", "/foo/bar/"),
+    ],
+)
+def test_normalize_url__dot_paths(url, expected):
     assert normalize_url(url) == expected
 
 
@@ -111,8 +121,8 @@ def test_normalize_url(url, expected):
         "urn:oasis:names:specification:docbook:dtd:xml:4.1.2",
     ],
 )
-def test_normalize_url__no_change(url):
-    """Assert normalize_url does not change URI if not required.
+def test_normalize_url__unchanged(url):
+    """Test cases where the URL is not expected to change
 
     http://www.intertwingly.net/wiki/pie/PaceCanonicalIds
     """
