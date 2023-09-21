@@ -1,6 +1,6 @@
 import pytest
 
-from request_normalize.request_normalize import (
+from request_normalizer.request_normalizer import (
     URL,
     generic_url_cleanup,
     normalize_host,
@@ -73,8 +73,8 @@ from request_normalize.request_normalize import (
         ),
     ],
 )
-def test_url_normalize(url, expected):
-    """Test main url_normalize function with a representative set of URLs"""
+def test_normalize_url(url, expected):
+    """Test main normalize_url function with a representative set of URLs"""
     assert normalize_url(url) == expected
 
 
@@ -111,22 +111,22 @@ def test_url_normalize(url, expected):
         "urn:oasis:names:specification:docbook:dtd:xml:4.1.2",
     ],
 )
-def test_url_normalize__no_change(url):
-    """Assert url_normalize does not change URI if not required.
+def test_normalize_url__no_change(url):
+    """Assert normalize_url does not change URI if not required.
 
     http://www.intertwingly.net/wiki/pie/PaceCanonicalIds
     """
     assert normalize_url(url) == url
 
 
-def test_url_normalize__with_http_scheme():
+def test_normalize_url__with_http_scheme():
     """Assert we could use http scheme as default."""
     url = "//www.foo.com/"
     expected = "http://www.foo.com/"
     assert normalize_url(url, default_scheme="http") == expected
 
 
-def test_url_normalize__unsorted():
+def test_normalize_url__unsorted():
     """Assert we could use http scheme as default."""
     url = "http://www.foo.com/?b=1&a=2"
     expected = "http://www.foo.com/?b=1&a=2"
