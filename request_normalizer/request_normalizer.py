@@ -15,27 +15,27 @@ from urllib.parse import parse_qsl, quote, unquote, urlsplit, urlunsplit
 
 import idna
 
-KVList = List[Tuple[str, str]]
+KVList = Iterable[Tuple[str, str]]
 ParamList = Optional[Iterable[str]]
 Headers = MutableMapping[str, str]
 
-AUTH_PATTERN = re.compile(r"([^@]*@)?([^:]*):?(.*)")
+AUTH_PATTERN = re.compile(r'([^@]*@)?([^:]*):?(.*)')
 DEFAULT_PORT = {
-    "ftp": "21",
-    "gopher": "70",
-    "http": "80",
-    "https": "443",
-    "news": "119",
-    "nntp": "119",
-    "snews": "563",
-    "snntp": "563",
-    "telnet": "23",
-    "ws": "80",
-    "wss": "443",
+    'ftp': '21',
+    'gopher': '70',
+    'http': '80',
+    'https': '443',
+    'news': '119',
+    'nntp': '119',
+    'snews': '563',
+    'snntp': '563',
+    'telnet': '23',
+    'ws': '80',
+    'wss': '443',
 }
 PORT_LOOKUP = {v: k for k, v in reversed(DEFAULT_PORT.items())}
-DEFAULT_CHARSET = "utf-8"
-DEFAULT_SCHEME = "https"
+DEFAULT_CHARSET = 'utf-8'
+DEFAULT_SCHEME = 'https'
 DEFAULT_SAFE_CHARS = "!#$%&'()*+,/:;=?@[]~"
 
 
@@ -53,7 +53,7 @@ class URL:
     def from_string(cls, url: str, default_scheme: str = DEFAULT_SCHEME) -> 'URL':
         """Parse a URL string into its components"""
         scheme, netloc, path, query, fragment = urlsplit(url)
-        (userinfo, host, port) = AUTH_PATTERN.search(netloc).groups()
+        (userinfo, host, port) = AUTH_PATTERN.search(netloc).groups()  # type: ignore
         return cls(
             fragment=fragment,
             host=host,
@@ -61,14 +61,14 @@ class URL:
             port=port,
             query=query,
             scheme=scheme,
-            userinfo=userinfo or "",
+            userinfo=userinfo or '',
         )
 
     def to_string(self) -> str:
         """Recombine URL components into a string"""
         auth = self.userinfo + self.host
         if self.port:
-            auth = f"{auth}:{self.port}"
+            auth = f'{auth}:{self.port}'
         return urlunsplit((self.scheme, auth, self.path, self.query, self.fragment))
 
 
@@ -80,16 +80,20 @@ def normalize_request(
     url: str,
     headers: Optional[Headers] = None,
     body: Union[str, bytes, None] = None,
+    charset: str = DEFAULT_CHARSET,
+    default_scheme: str = DEFAULT_SCHEME,
     ignore_params: ParamList = None,
     redact_ignored: bool = False,
     sort_params: bool = True,
 ) -> Tuple[str, Headers, bytes]:
-    """
+    """Normalize and filter request components.
 
     Args:
         url: Request URL to normalize
         headers: Request headers to normalize
         body: Request body to normalize
+        charset: The target charset for the URL if the url was given as unicode string
+        default_scheme: Default scheme to use if none is provided
         ignore_params: Request parameters, headers, and/or JSON body params to exclude
         redact_ignored: Redact ignored params instead of removing them
         sort_params: Sort request parameters
@@ -98,7 +102,9 @@ def normalize_request(
         Normalized and filtered request URL, headers, and body
     """
     return (
-        normalize_url(url or '', ignore_params, sort_params, redact_ignored),
+        normalize_url(
+            url or '', charset, default_scheme, ignore_params, sort_params, redact_ignored
+        ),
         normalize_headers(headers, ignore_params, redact_ignored),
         normalize_body(body, headers, ignore_params, redact_ignored),
     )
@@ -120,7 +126,7 @@ def normalize_headers(
 
 
 def normalize_body(
-    body: Union[str, bytes],
+    body: Union[str, bytes, None],
     headers: Optional[Headers] = None,
     ignore_params: ParamList = None,
     redact_ignored: bool = False,
@@ -128,7 +134,7 @@ def normalize_body(
     """Normalize and filter a request body if possible, depending on Content-Type"""
     if not body:
         return b''
-    content_type = headers.get('Content-Type')
+    content_type = (headers or {}).get('Content-Type')
 
     # Filter and sort params if possible
     if content_type == 'application/json':
@@ -173,18 +179,20 @@ def normalize_url(
     This function can fix some of the problems in a similar way
     browsers handle data entered by the user:
 
-    >>> url_normalize('http://de.wikipedia.org/wiki/Elf (Begriffsklärung)')
-    'http://de.wikipedia.org/wiki/Elf%20%28Begriffskl%C3%A4rung%29'
-
-    Params:
-        charset: The target charset for the URL if the url was given as unicode string.
+    Args:
+        url: URL to normalize
+        charset: The target charset for the URL if the url was given as unicode string
+        default_scheme: Default scheme to use if none is provided
+        ignore_params: Request parameters, headers, and/or JSON body params to exclude
+        redact_ignored: Redact ignored params instead of removing them
+        sort_params: Sort request parameters
 
     Returns:
-        string : a normalized url
+        Normalized URL
     """
     if not url:
         return url
-    url = url.strip().rstrip("&?")
+    url = url.strip().rstrip('&?')
     url = provide_url_scheme(url, default_scheme)
     url_parts = URL.from_string(url, default_scheme)
 
@@ -192,7 +200,7 @@ def normalize_url(
     url_parts.userinfo = normalize_userinfo(url_parts.userinfo)
     url_parts.host = normalize_host(url_parts.host, charset)
     url_parts.query = normalize_query(url_parts.query, ignore_params, sort_params, redact_ignored)
-    url_parts.fragment = requote(url_parts.fragment, safe="~!/")
+    url_parts.fragment = _requote(url_parts.fragment, safe='~!/')
     url_parts.port = normalize_port(url_parts.port, url_parts.scheme)
     url_parts.path = normalize_path(url_parts.path, url_parts.scheme)
 
@@ -200,22 +208,14 @@ def normalize_url(
 
 
 def provide_url_scheme(url: str, default_scheme: str = DEFAULT_SCHEME) -> str:
-    """Make sure we have valid url scheme.
-
-    Params:
-        url: the URL
-        default_scheme: default scheme to use
-
-    Returns:
-        Updated url with validated/attached scheme
-    """
+    """Update a URL if it does not contain a valid scheme."""
     has_scheme = ':' in url[:7]  # TODO: This doesn't seem sufficient
     is_universal_scheme = url.startswith('//')
-    is_file_path = url == "-" or (url.startswith('/') and not is_universal_scheme)
+    is_file_path = url == '-' or (url.startswith('/') and not is_universal_scheme)
 
     # Alternative:
     # First check for 'scheme://netloc' (fast), then for less common 'scheme:netloc' (~200ns slower)
-    # SCHEME_PATTERN = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*:")
+    # SCHEME_PATTERN = re.compile(r'^[a-zA-Z][a-zA-Z0-9+.-]*:')
     # elif '://' in url or SCHEME_PATTERN.match(url):
     #     return url
 
@@ -223,7 +223,7 @@ def provide_url_scheme(url: str, default_scheme: str = DEFAULT_SCHEME) -> str:
         return url
 
     # Handle a tricky case that urlsplit doesn't parse correctly: URL with known port but no scheme
-    parts = url.replace('//', '').split("/")[0].split(':')
+    parts = url.replace('//', '').split('/')[0].split(':')
     if len(parts) >= 2:
         port = parts[-1]
         default_scheme = PORT_LOOKUP.get(port, default_scheme)
@@ -232,32 +232,13 @@ def provide_url_scheme(url: str, default_scheme: str = DEFAULT_SCHEME) -> str:
     return f'{default_scheme}:{sep}{url}'
 
 
-def normalize_userinfo(userinfo):
-    """Normalize userinfo part of the url.
-
-    Params:
-        userinfo : string : url userinfo, e.g., 'user@'
-
-    Returns:
-        string : normalized userinfo data.
-    """
-    if userinfo in ["@", ":@"]:
-        return ""
-    return userinfo
+def normalize_userinfo(userinfo: str) -> str:
+    """Normalize userinfo part of the url"""
+    return '' if userinfo in ['@', ':@'] else userinfo
 
 
-def normalize_host(host, charset=DEFAULT_CHARSET):
-    """Normalize host part of the url.
-
-    Lowercase and strip of final dot.
-    Also, take care about IDN domains.
-
-    Params:
-        host : string : url host, e.g., 'site.com'
-
-    Returns:
-        string : normalized host data.
-    """
+def normalize_host(host: str, charset: str = DEFAULT_CHARSET) -> str:
+    """Normalize host part of the url: Lowercase, strip off final dot, and encode IDN domains."""
     host = host.lower()
     host = host.strip('.')
     # Skip IDN normalization for URIs that do not contain a domain name
@@ -266,66 +247,47 @@ def normalize_host(host, charset=DEFAULT_CHARSET):
     return host
 
 
-def normalize_port(port, scheme):
-    """Normalize port part of the url.
-
-    Remove mention of default port number
-
-    Params:
-        port : string : url port, e.g., '8080'
-        scheme : string : url scheme, e.g., 'http'
-
-    Returns:
-        string : normalized port data.
-    """
+def normalize_port(port: str, scheme: str) -> str:
+    """Normalize URL port: remove default port number, and strip leading zeroes."""
     if not port.isdigit():
         return port
     port = str(int(port))
     if DEFAULT_PORT[scheme] == port:
-        return ""
+        port = ''
     return port
 
 
-def normalize_path(path, scheme):
-    """Normalize path part of the url.
-
-    Remove mention of default path number
-
-    Params:
-        path : string : url path, e.g., '/section/page.html'
-        scheme : string : url scheme, e.g., 'http'
-
-    Returns:
-        string : normalized path data.
-    """
-    if scheme not in ["", "http", "https", "ftp", "file"]:
+def normalize_path(path: str, scheme: str) -> str:
+    """Normalize path part of the url. Remove mention of default path number."""
+    if scheme not in ['', 'http', 'https', 'ftp', 'file']:
         return path
 
     # Only perform percent-encoding where it is essential.
     # Always use uppercase A-through-F characters when percent-encoding.
     # All portions of the URI must be utf-8 encoded NFC from Unicode strings
-    path = requote(path)
+    path = _requote(path)
 
     # Prevent dot-segments appearing in non-relative URI paths.
-    output, part = [], None
-    parts = path.split("/")
+    output: List[str] = []
+    part = None
+    parts = path.split('/')
     last_idx = len(parts) - 1
     for idx, part in enumerate(parts):
-        if part == "":
+        if part == '':
             if len(output) == 0:
                 output.append(part)
-        elif part == "..":
+        elif part == '..':
             if len(output) > 1:
                 output.pop()
-        elif part != "." and not (idx < last_idx and re.search(r'\.', part)):
+        elif part != '.' and not (idx < last_idx and re.search(r'\.', part)):
             output.append(part)
-    if part in ["", ".", ".."]:
-        output.append("")
-    path = "/".join(output)
+    if part in ['', '.', '..']:
+        output.append('')
+    path = '/'.join(output)
 
-    # For schemes that define an empty path to be equivalent to a path of "/", use "/".
+    # For schemes that define an empty path to be equivalent to a path of '/', use '/'.
     if scheme and not path:
-        path = "/"
+        path = '/'
     return path
 
 
@@ -335,51 +297,29 @@ def normalize_query(
     sort_params: bool = True,
     redact_ignored: bool = False,
 ) -> str:
-    """Normalize and filter urlencoded params from either a URL or request body with form data
-
-    Params:
-        query: url query, e.g., 'param1=val1&param2=val2'
-
-    Returns:
-        string : normalized query data.
-    """
+    """Normalize and filter urlencoded params from either a URL or request body with form data."""
     query = _decode(query)
-    query_dict = [(requote(k), requote(v)) for k, v in parse_qsl(query)]
+    query_dict = [(_requote(k), _requote(v)) for k, v in parse_qsl(query)]
     filtered_query = [
         f'{k}={v}' for k, v in _filter_mapping(query_dict, ignore_params, redact_ignored)
     ]
 
     # parse_qsl doesn't handle key-only params, so add those here
-    key_only_params = [requote(k) for k in query.split('&') if k and '=' not in k]
+    key_only_params = [_requote(k) for k in query.split('&') if k and '=' not in k]
     filtered_query += _filter_list(key_only_params, ignore_params, redact_ignored)
     if sort_params:
         filtered_query = sorted(filtered_query)
     return '&'.join(filtered_query)
 
 
-def requote(string, charset="utf-8", safe=DEFAULT_SAFE_CHARS):
-    """Unquote and requote unicode string to normalize.
-
-    Params:
-        string : string to be unquoted
-        charset : string : optional : output encoding
-
-    Returns:
-        string : an unquoted and normalized string
-    """
-    string = unquote(string)
-    string = unicodedata.normalize("NFC", string).encode(charset)
-    return quote(string, safe)
-
-
-def _decode(value, encoding='utf-8') -> str:
+def _decode(value: Union[str, bytes], encoding: str = 'utf-8') -> str:
     """Decode a value from bytes, if hasn't already been"""
     if not value:
         return ''
     return value.decode(encoding) if isinstance(value, bytes) else value
 
 
-def _encode(value, encoding='utf-8') -> bytes:
+def _encode(value: Union[str, bytes], encoding: str = 'utf-8') -> bytes:
     """Encode a value to bytes, if it hasn't already been"""
     if not value:
         return b''
@@ -389,6 +329,7 @@ def _encode(value, encoding='utf-8') -> bytes:
 def _filter_mapping(
     data: KVList, ignore_params: ParamList = None, redact_ignored: bool = False
 ) -> KVList:
+    """Remove or redact ignored keys from a list of key-value pairs"""
     ignore_params = set(ignore_params or [])
     if redact_ignored:
         return [(k, 'REDACTED' if k in ignore_params else v) for k, v in data]
@@ -397,8 +338,22 @@ def _filter_mapping(
 
 
 def _filter_list(data: List, ignore_params: ParamList = None, redact_ignored: bool = False) -> List:
+    """Remove or redact ignored keys from a list"""
     ignore_params = set(ignore_params or [])
     if redact_ignored:
         return [('REDACTED' if k in ignore_params else k) for k in data]
     else:
         return [k for k in data if k not in ignore_params]
+
+
+def _requote(value: str, charset: str = 'utf-8', safe: str = DEFAULT_SAFE_CHARS) -> str:
+    """Unquote and requote unicode string to normalize.
+
+    Args:
+        value: string to be unquoted
+        charset: output encoding
+        safe: Safe characters to leave unquoted
+    """
+    value = unquote(value)
+    encoded_value = unicodedata.normalize('NFC', value).encode(charset)
+    return quote(encoded_value, safe)

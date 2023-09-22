@@ -13,6 +13,10 @@ pip install request-normalizer
 URL only:
 ```python
 >>> from request_normalizer import normalize_url
+
+>>> normalize_url('http://de.wikipedia.org/wiki/Elf (Begriffsklärung)')
+'http://de.wikipedia.org/wiki/Elf%20%28Begriffskl%C3%A4rung%29'
+
 >>> normalize_url('https://EXAMPLE.COM:443/page/?user=%7Ejane&q=%5c')
 'https://example.com/page/?q=%5C&user=~jane'
 ```
