@@ -252,7 +252,7 @@ def normalize_port(port: str, scheme: str) -> str:
     if not port.isdigit():
         return port
     port = str(int(port))
-    if DEFAULT_PORT[scheme] == port:
+    if DEFAULT_PORT.get(scheme) == port:
         port = ''
     return port
 

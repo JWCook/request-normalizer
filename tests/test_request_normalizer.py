@@ -119,8 +119,7 @@ def test_normalize_url__dot_paths(url, expected):
         # TODO: issue #31
         # 'https://example.com/search?q=%23hashtag&src=typed_query',
         # from rfc2396bis
-        # TODO: issue #34
-        # 'foo://localhost:1234/',
+        'foo://localhost:1234/',  # Unknown scheme with excplicit port
         'ftp://ftp.is.co.za/rfc/rfc1808.txt',
         'http://www.ietf.org/rfc/rfc2396.txt',
         'ldap://[2001:db8::7]/c=GB?objectClass?one',
