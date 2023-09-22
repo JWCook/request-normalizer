@@ -20,23 +20,38 @@ ParamList = Optional[Iterable[str]]
 Headers = MutableMapping[str, str]
 
 AUTH_PATTERN = re.compile(r'([^@]*@)?([^:]*):?(.*)')
-DEFAULT_PORT = {
+DEFAULT_CHARSET = 'utf-8'
+DEFAULT_SCHEME = 'https'
+DEFAULT_SAFE_CHARS = "!#$%&'()*+,/:;=?@[]~"
+
+# Default port numbers for a subset of common protocols. Sources:
+#   * https://github.com/python-hyper/hyperlink
+#   * https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml
+#   * https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
+DEFAULT_PORTS = {
+    'dns': '53',
     'ftp': '21',
+    'git': '9418',
     'gopher': '70',
     'http': '80',
     'https': '443',
+    'imap': '143',
+    'irc': '6697',
+    'ldap': '389',
+    'nfs': '111',
     'news': '119',
     'nntp': '119',
+    'redis': '6379',
+    'ssh': '22',
+    'sftp': '22',
     'snews': '563',
     'snntp': '563',
+    'smb': '445',
     'telnet': '23',
     'ws': '80',
     'wss': '443',
 }
-PORT_LOOKUP = {v: k for k, v in reversed(list(DEFAULT_PORT.items()))}
-DEFAULT_CHARSET = 'utf-8'
-DEFAULT_SCHEME = 'https'
-DEFAULT_SAFE_CHARS = "!#$%&'()*+,/:;=?@[]~"
+PORT_LOOKUP = {v: k for k, v in reversed(list(DEFAULT_PORTS.items()))}
 
 
 @dataclass
@@ -252,7 +267,7 @@ def normalize_port(port: str, scheme: str) -> str:
     if not port.isdigit():
         return port
     port = str(int(port))
-    if DEFAULT_PORT.get(scheme) == port:
+    if DEFAULT_PORTS.get(scheme) == port:
         port = ''
     return port
 

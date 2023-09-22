@@ -1,6 +1,7 @@
 import pytest
 
 from request_normalizer.request_normalizer import (
+    DEFAULT_PORTS,
     URL,
     _requote,
     normalize_host,
@@ -21,7 +22,6 @@ from request_normalizer.request_normalizer import (
         ('http://@example.com/', 'http://example.com/'),
         ('http://127.0.0.1:80/', 'http://127.0.0.1/'),
         ('http://example.com:081/', 'http://example.com:81/'),
-        ('http://example.com:80/', 'http://example.com/'),
         ('http://example.com', 'http://example.com/'),
         ('http://example.com&', 'http://example.com/'),
         ('http://example.com?', 'http://example.com/'),
@@ -46,7 +46,6 @@ from request_normalizer.request_normalizer import (
         # TODO: Issue #19
         # ('http:example.com', 'http://example.com/'),
         ('http://www.example.com./', 'http://www.example.com/'),
-        ('http://www.foo.com:80/foo', 'http://www.foo.com/foo'),
         ('www.foo.com:80/foo', 'http://www.foo.com/foo'),
         ('http://www.foo.com.:81/foo', 'http://www.foo.com:81/foo'),
         ('http://www.foo.com./foo/bar.html', 'http://www.foo.com/foo/bar.html'),
@@ -136,6 +135,14 @@ def test_normalize_url__unchanged(url):
     http://www.intertwingly.net/wiki/pie/PaceCanonicalIds
     """
     assert normalize_url(url) == url
+
+
+@pytest.mark.parametrize("scheme, port", DEFAULT_PORTS.items())
+def test_normalize_url__default_ports(scheme, port):
+    """Default ports should be removed for known schemes"""
+    url = f"{scheme}://example.com:{port}/path"
+    expected = f"{scheme}://example.com/path"
+    assert normalize_url(url) == expected
 
 
 def test_normalize_url__with_http_scheme():
