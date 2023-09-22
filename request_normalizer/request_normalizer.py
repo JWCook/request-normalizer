@@ -33,7 +33,7 @@ DEFAULT_PORT = {
     'ws': '80',
     'wss': '443',
 }
-PORT_LOOKUP = {v: k for k, v in reversed(DEFAULT_PORT.items())}
+PORT_LOOKUP = {v: k for k, v in reversed(list(DEFAULT_PORT.items()))}
 DEFAULT_CHARSET = 'utf-8'
 DEFAULT_SCHEME = 'https'
 DEFAULT_SAFE_CHARS = "!#$%&'()*+,/:;=?@[]~"
