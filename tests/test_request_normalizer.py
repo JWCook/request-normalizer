@@ -32,6 +32,10 @@ from request_normalizer.request_normalizer import (
         ("http://example.com/?foo=1&foo=2&bar=3", "http://example.com/?bar=3&foo=1&foo=2"),
         ("http://example.com/?q=C%CC%A7", "http://example.com/?q=%C3%87"),
         ("http://EXAMPLE.COM/", "http://example.com/"),
+        (
+            "https://EXAMPLE.COM:443/page/?user=%7Ejane&q=%5c",
+            "https://example.com/page/?q=%5C&user=~jane",
+        ),
         ("http://example.com/%7Ejane", "http://example.com/~jane"),
         ("http://example.com/a/../a/b", "http://example.com/a/b"),
         ("http://example.com/a/./b", "http://example.com/a/b"),
