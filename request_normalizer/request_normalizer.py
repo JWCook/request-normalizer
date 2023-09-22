@@ -1,6 +1,11 @@
 # TODO: Normalize header casing
 # TODO: optional support for request models from requests, aiohttp, httpx, etc.
 # TODO: Migrate unit tests for normalize_request
+# TODO: LRU cache for most CPU-intensive functions
+#   * IDNA encoding
+#   * handling missing scheme?
+#   * need to benchmark to discover others
+#   * Note: urlsplit has its own internal cache
 import json
 import re
 import unicodedata
@@ -14,7 +19,7 @@ KVList = List[Tuple[str, str]]
 ParamList = Optional[Iterable[str]]
 Headers = MutableMapping[str, str]
 
-AUTH_PATTERN = re.compile("([^@]*@)?([^:]*):?(.*)")
+AUTH_PATTERN = re.compile(r"([^@]*@)?([^:]*):?(.*)")
 DEFAULT_PORT = {
     "ftp": "21",
     "gopher": "70",
@@ -28,6 +33,7 @@ DEFAULT_PORT = {
     "ws": "80",
     "wss": "443",
 }
+PORT_LOOKUP = {v: k for k, v in reversed(DEFAULT_PORT.items())}
 DEFAULT_CHARSET = "utf-8"
 DEFAULT_SCHEME = "https"
 DEFAULT_SAFE_CHARS = "!#$%&'()*+,/:;=?@[]~"
@@ -44,10 +50,10 @@ class URL:
     fragment: str
 
     @classmethod
-    def from_string(cls, url: str) -> 'URL':
+    def from_string(cls, url: str, default_scheme: str = DEFAULT_SCHEME) -> 'URL':
         """Parse a URL string into its components"""
-        scheme, auth, path, query, fragment = urlsplit(url)
-        (userinfo, host, port) = AUTH_PATTERN.search(auth).groups()
+        scheme, netloc, path, query, fragment = urlsplit(url)
+        (userinfo, host, port) = AUTH_PATTERN.search(netloc).groups()
         return cls(
             fragment=fragment,
             host=host,
@@ -180,7 +186,7 @@ def normalize_url(
         return url
     url = url.strip().rstrip("&?")
     url = provide_url_scheme(url, default_scheme)
-    url_parts = URL.from_string(url)
+    url_parts = URL.from_string(url, default_scheme)
 
     url_parts.scheme = url_parts.scheme.lower()
     url_parts.userinfo = normalize_userinfo(url_parts.userinfo)
@@ -193,24 +199,37 @@ def normalize_url(
     return url_parts.to_string()
 
 
-def provide_url_scheme(url, default_scheme=DEFAULT_SCHEME):
+def provide_url_scheme(url: str, default_scheme: str = DEFAULT_SCHEME) -> str:
     """Make sure we have valid url scheme.
 
     Params:
-        url : string : the URL
-        default_scheme : string : default scheme to use, e.g. 'https'
+        url: the URL
+        default_scheme: default scheme to use
 
     Returns:
-        string : updated url with validated/attached scheme
+        Updated url with validated/attached scheme
     """
-    has_scheme = ":" in url[:7]
-    is_universal_scheme = url.startswith("//")
-    is_file_path = url == "-" or (url.startswith("/") and not is_universal_scheme)
+    has_scheme = ':' in url[:7]  # TODO: This doesn't seem sufficient
+    is_universal_scheme = url.startswith('//')
+    is_file_path = url == "-" or (url.startswith('/') and not is_universal_scheme)
+
+    # Alternative:
+    # First check for 'scheme://netloc' (fast), then for less common 'scheme:netloc' (~200ns slower)
+    # SCHEME_PATTERN = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*:")
+    # elif '://' in url or SCHEME_PATTERN.match(url):
+    #     return url
+
     if not url or has_scheme or is_file_path:
         return url
-    if is_universal_scheme:
-        return default_scheme + ":" + url
-    return default_scheme + "://" + url
+
+    # Handle a tricky case that urlsplit doesn't parse correctly: URL with known port but no scheme
+    parts = url.replace('//', '').split("/")[0].split(':')
+    if len(parts) >= 2:
+        port = parts[-1]
+        default_scheme = PORT_LOOKUP.get(port, default_scheme)
+
+    sep = '' if is_universal_scheme else '//'
+    return f'{default_scheme}:{sep}{url}'
 
 
 def normalize_userinfo(userinfo):
@@ -240,11 +259,11 @@ def normalize_host(host, charset=DEFAULT_CHARSET):
         string : normalized host data.
     """
     host = host.lower()
-    host = host.strip(".")
+    host = host.strip('.')
     # Skip IDN normalization for URIs that do not contain a domain name
-    if '.' not in host:
-        return host
-    return idna.encode(host, uts46=True, transitional=True).decode(charset)
+    if '.' in host:
+        host = idna.encode(host, uts46=True, transitional=True).decode(charset)
+    return host
 
 
 def normalize_port(port, scheme):

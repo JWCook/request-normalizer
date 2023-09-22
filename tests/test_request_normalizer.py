@@ -43,8 +43,11 @@ from request_normalizer.request_normalizer import (
             "http://USER:pass@www.Example.COM/foo/bar",
             "http://USER:pass@www.example.com/foo/bar",
         ),
+        # TODO: Issue #19
+        # ("http:example.com", "http://example.com/"),
         ("http://www.example.com./", "http://www.example.com/"),
         ("http://www.foo.com:80/foo", "http://www.foo.com/foo"),
+        ("www.foo.com:80/foo", "http://www.foo.com/foo"),
         ("http://www.foo.com.:81/foo", "http://www.foo.com:81/foo"),
         ("http://www.foo.com./foo/bar.html", "http://www.foo.com/foo/bar.html"),
         ("http://www.foo.com/foo/bar.html/../bar.html", "http://www.foo.com/bar.html"),
@@ -113,6 +116,8 @@ def test_normalize_url__dot_paths(url, expected):
         "http://www.foo.com:8000/foo",
         "http://example.com/hello-world#!/pages/12345",
         "http://user@www.example.com:8080/path/index.html?param=val#fragment",
+        # TODO: issue #31
+        # "https://example.com/search?q=%23hashtag&src=typed_query",
         # from rfc2396bis
         "ftp://ftp.is.co.za/rfc/rfc1808.txt",
         "http://www.ietf.org/rfc/rfc2396.txt",
