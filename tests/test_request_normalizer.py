@@ -2,7 +2,6 @@ import pytest
 
 from request_normalizer.request_normalizer import (
     URL,
-    generic_url_cleanup,
     normalize_host,
     normalize_path,
     normalize_port,
@@ -24,6 +23,8 @@ from request_normalizer.request_normalizer import (
         ("http://example.com:081/", "http://example.com:81/"),
         ("http://example.com:80/", "http://example.com/"),
         ("http://example.com", "http://example.com/"),
+        ("http://example.com&", "http://example.com/"),
+        ("http://example.com?", "http://example.com/"),
         ("http://example.com/?b&a", "http://example.com/?a&b"),
         ("http://example.com/?q=%5c", "http://example.com/?q=%5C"),
         ("http://example.com/?q=%C7", "http://example.com/?q=%EF%BF%BD"),
@@ -34,10 +35,6 @@ from request_normalizer.request_normalizer import (
         ("http://example.com/%7Ejane", "http://example.com/~jane"),
         ("http://example.com/a/../a/b", "http://example.com/a/b"),
         ("http://example.com/a/./b", "http://example.com/a/b"),
-        (
-            "http://example.com/#!5753509/hello-world",
-            "http://example.com/?_escaped_fragment_=5753509/hello-world",
-        ),
         (
             "http://USER:pass@www.Example.COM/foo/bar",
             "http://USER:pass@www.example.com/foo/bar",
@@ -110,6 +107,8 @@ def test_normalize_url__dot_paths(url, expected):
         "http://example.com/FOO",
         "http://user:password@example.com/",
         "http://www.foo.com:8000/foo",
+        "http://example.com/hello-world#!/pages/12345",
+        "http://user@www.example.com:8080/path/index.html?param=val#fragment",
         # from rfc2396bis
         "ftp://ftp.is.co.za/rfc/rfc1808.txt",
         "http://www.ietf.org/rfc/rfc2396.txt",
@@ -195,21 +194,6 @@ def test_url_to_string__defaults():
         userinfo="",
     )
     assert url.to_string() == "http://site.com"
-
-
-@pytest.mark.parametrize(
-    "url, expected",
-    [
-        ("//site/#!fragment", "//site/?_escaped_fragment_=fragment"),
-        ("//site/?utm_source=some source&param=value", "//site/?param=value"),
-        ("//site/?utm_source=some source", "//site/"),
-        ("//site/?param=value&utm_source=some source", "//site/?param=value"),
-        ("//site/page", "//site/page"),
-        ("//site/?& ", "//site/"),
-    ],
-)
-def test_generic_url_cleanup(url, expected):
-    assert generic_url_cleanup(url) == expected
 
 
 @pytest.mark.parametrize(

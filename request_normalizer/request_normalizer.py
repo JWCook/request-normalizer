@@ -30,6 +30,7 @@ DEFAULT_PORT = {
 }
 DEFAULT_CHARSET = "utf-8"
 DEFAULT_SCHEME = "https"
+DEFAULT_SAFE_CHARS = "!#$%&'()*+,/:;=?@[]~"
 
 
 @dataclass
@@ -45,7 +46,7 @@ class URL:
     @classmethod
     def from_string(cls, url: str) -> 'URL':
         """Parse a URL string into its components"""
-        scheme, auth, path, query, fragment = urlsplit(url.strip())
+        scheme, auth, path, query, fragment = urlsplit(url)
         (userinfo, host, port) = AUTH_PATTERN.search(auth).groups()
         return cls(
             fragment=fragment,
@@ -177,15 +178,15 @@ def normalize_url(
     """
     if not url:
         return url
+    url = url.strip().rstrip("&?")
     url = provide_url_scheme(url, default_scheme)
-    url = generic_url_cleanup(url)
     url_parts = URL.from_string(url)
 
     url_parts.scheme = url_parts.scheme.lower()
     url_parts.userinfo = normalize_userinfo(url_parts.userinfo)
     url_parts.host = normalize_host(url_parts.host, charset)
     url_parts.query = normalize_query(url_parts.query, ignore_params, sort_params, redact_ignored)
-    url_parts.fragment = requote(url_parts.fragment, safe="~")
+    url_parts.fragment = requote(url_parts.fragment, safe="~!/")
     url_parts.port = normalize_port(url_parts.port, url_parts.scheme)
     url_parts.path = normalize_path(url_parts.path, url_parts.scheme)
 
@@ -210,23 +211,6 @@ def provide_url_scheme(url, default_scheme=DEFAULT_SCHEME):
     if is_universal_scheme:
         return default_scheme + ":" + url
     return default_scheme + "://" + url
-
-
-def generic_url_cleanup(url):
-    """Cleanup the URL from unnecessary data and convert to final form.
-
-    Converts shebang urls to final form, removed unnecessary data from the url.
-
-    Params:
-        url : string : the URL
-
-    Returns:
-        string : update url
-    """
-    url = url.replace("#!", "?_escaped_fragment_=")
-    url = re.sub(r"utm_source=[^&]+&?", "", url)
-    url = url.rstrip("&? ")
-    return url
 
 
 def normalize_userinfo(userinfo):
@@ -354,7 +338,7 @@ def normalize_query(
     return '&'.join(filtered_query)
 
 
-def requote(string, charset="utf-8", safe="~:/?#[]@!$&'()*+,;="):
+def requote(string, charset="utf-8", safe=DEFAULT_SAFE_CHARS):
     """Unquote and requote unicode string to normalize.
 
     Params:
