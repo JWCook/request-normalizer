@@ -1,8 +1,7 @@
-url-normalize
-=============
+# request-normalize
+**WIP/Incomplete**
 
-[![Build Status](https://travis-ci.org/niksite/url-normalize.svg?branch=master)](https://travis-ci.org/niksite/url-normalize)
-[![Coverage Status](https://coveralls.io/repos/github/niksite/url-normalize/badge.svg?branch=master)](https://coveralls.io/github/niksite/url-normalize?branch=master)
+A fork of Nikolay Panov's [url_normalize](https://github.com/niksite/url-normalize) library, with additional features for HTTP request matching.
 
 URI Normalization function:
 
@@ -17,38 +16,14 @@ URI Normalization function:
 * For schemes that define a port, use an empty port if the default is desired
 * All portions of the URI must be utf-8 encoded NFC from Unicode strings
 
-Inspired by Sam Ruby's [urlnorm.py](http://intertwingly.net/blog/2004/08/04/Urlnorm)
-
-Example:
-
+# Installation
 ```sh
-$ pip install url-normalize
-Collecting url-normalize
-...
-Successfully installed future-0.16.0 url-normalize-1.3.3
-$ python
-Python 3.6.1 (default, Jul  8 2017, 05:00:20)
-[GCC 4.9.2] on linux
-Type "help", "copyright", "credits" or "license" for more information.
-> from url_normalize import url_normalize
-> print(url_normalize('www.foo.com:80/foo'))
-> https://www.foo.com/foo
+pip install request-normalize
 ```
 
-History:
-
-* 1.4.3: Added LICENSE file
-* 1.4.2: Added an optional param sort_query_params (True by default)
-* 1.4.1: Added an optional param default_scheme to the url_normalize ('https' by default)
-* 1.4.0: A bit of code refactoring and cleanup
-* 1.3.3: Support empty string and double slash urls (//domain.tld)
-* 1.3.2: Same code support both Python 3 and Python 2.
-* 1.3.1: Python 3 compatibility
-* 1.2.1: PEP8, setup.py
-* 1.1.2: support for shebang (#!) urls
-* 1.1.1: using 'http' schema by default when appropriate
-* 1.1.0: added handling of IDN domains
-* 1.0.0: code pep8
-* 0.1.0: forked from Sam Ruby's urlnorm.py
-
-License: MIT License
+# Usage
+```python
+>>> from url_normalize import url_normalize
+>>> print(url_normalize('www.foo.com:80/foo'))
+'https://www.foo.com/foo'
+```
