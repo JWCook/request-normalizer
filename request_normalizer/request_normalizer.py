@@ -1,6 +1,9 @@
 # TODO: Normalize header casing
 # TODO: optional support for request models from requests, aiohttp, httpx, etc.
 # TODO: Migrate unit tests for normalize_request
+# TODO: url-normalize/issues/19
+# TODO: url-normalize/issues/25
+# TODO: url-normalize/issues/31
 # TODO: LRU cache for most CPU-intensive functions
 #   * IDNA encoding
 #   * handling missing scheme?

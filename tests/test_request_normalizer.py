@@ -115,10 +115,12 @@ def test_normalize_url__dot_paths(url, expected):
         'http://www.foo.com:8000/foo',
         'http://example.com/hello-world#!/pages/12345',
         'http://user@www.example.com:8080/path/index.html?param=val#fragment',
+        # TODO: Issue #25
+        # 'https://www.google.com/?where=code%3D123',
         # TODO: issue #31
         # 'https://example.com/search?q=%23hashtag&src=typed_query',
-        # from rfc2396bis
         'foo://localhost:1234/',  # Unknown scheme with excplicit port
+        # from rfc2396bis
         'ftp://ftp.is.co.za/rfc/rfc1808.txt',
         'http://www.ietf.org/rfc/rfc2396.txt',
         'ldap://[2001:db8::7]/c=GB?objectClass?one',
