@@ -8,6 +8,12 @@ repository = "https://github.com/JWCook/request-normalizer"
 homepage = "https://github.com/JWCook/request-normalizer"
 keywords = ['http', 'request', 'url', 'normalization', 'normalize']
 readme = "README.md"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
 
 [tool.poetry.urls]
 "Changelog" = "https://github.com/JWCook/request-normalizer/blob/main/HISTORY.md"
@@ -44,10 +50,7 @@ branch = true
 source = ['request_normalizer']
 
 [tool.coverage.report]
-exclude_lines = [
-    'pragma: no cover',
-    'if TYPE_CHECKING:',
-]
+exclude_lines = ['pragma: no cover', 'if TYPE_CHECKING:']
 
 [tool.isort]
 profile = 'black'
@@ -61,7 +64,7 @@ addopts = "--disable-socket"
 [tool.ruff]
 format = 'grouped'
 line-length = 100
-select = ['B', 'C4','C90', 'E', 'F', 'W']
+select = ['B', 'C4', 'C90', 'E', 'F', 'W']
 
 [tool.bandit]
 exclude_dirs = [".nox", "tests"]
