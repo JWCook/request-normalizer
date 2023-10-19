@@ -1,5 +1,26 @@
 # History
 
+## 2.0.0
+* Forked from [url-normalize](https://github.com/niksite/url-normalize)
+* Added additional request normalization utilities from [requests-cache](https://github.com/requests-cache/requests-cache)
+* Remove support for `?_escaped_fragment_` (for deprecated google crawler feature) 
+* Skip removing `utm_source` param (can be done via ignored_params if needed)
+
+**Compatibility:**
+* Remove python 2.7 support
+* Add type annotations and PEP-561 compliance
+* Add tests for python 3.8-3.12 and pypy 3.9-3.10
+* Add more default ports for common protocols
+
+**Bugfixes:**
+* Handle case where there is a known port but no scheme
+* Handle case where there is a known port but no scheme
+
+**Internal:**
+* Add CI/dev tools: pre-commit, ruff, mypy, nox, and GitHub Actions
+
+## 1.x (url-normalize)
+
 * 1.4.3: Added LICENSE file
 * 1.4.2: Added an optional param sort_query_params (True by default)
 * 1.4.1: Added an optional param default_scheme to the url_normalize ('https' by default)
